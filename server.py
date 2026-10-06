@@ -45,6 +45,9 @@ def profile_values(profile):
         struggle_label = effective_struggle_category
 
     return {
+        "name": clean_string(
+            profile.get("name", "")
+        ),
         "spiritual_position": clean_string(
             profile.get("spiritualPosition", "")
         ),
@@ -81,6 +84,9 @@ def profile_values(profile):
 
 def build_profile_context(values):
     return f"""
+Preferred name:
+{values['name'] or 'Not provided'}
+
 Spiritual position:
 {values['spiritual_position'] or 'Not provided'}
 
@@ -807,6 +813,9 @@ IMPORTANT EVIDENCE RULES:
 - Do not treat study history as a spiritual score.
 
 Use the context naturally and sparingly:
+- if the user supplied a preferred name, you may address them by it naturally
+- use their name sparingly: greetings, encouragement, or meaningful moments are appropriate
+- do not use their name in every response, every paragraph, or as a repetitive verbal tic
 - adapt vocabulary and depth to Bible familiarity
 - adapt challenge to the user's stated preference
 - connect to a prior passage or reflection when it is directly relevant
@@ -1109,6 +1118,10 @@ CONVERSATION STYLE
 =========================================================
 
 Be warm, calm, concise, and conversational.
+
+If the user supplied a preferred name, you may use it naturally and sparingly.
+A greeting, encouragement, or meaningful transition can be a good place for it.
+Do not use their name in every reply.
 
 Ask only ONE primary question at a time.
 
