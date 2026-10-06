@@ -2295,6 +2295,28 @@ def journey_summary():
         or {}
     )
 
+    profile = (
+        data.get(
+            "profile",
+            {}
+        )
+        or {}
+    )
+
+    if not isinstance(
+        profile,
+        dict
+    ):
+        profile = {}
+
+    values = profile_values(
+        profile
+    )
+
+    preferred_name = values[
+        "name"
+    ]
+
     journey = (
         data.get(
             "journey",
@@ -2472,6 +2494,7 @@ def journey_summary():
         })
 
     summary_material = {
+        "preferredName": preferred_name,
         "journey": {
             "title": title,
             "subtitle": subtitle,
@@ -2603,6 +2626,12 @@ encouragement:
 One brief, grounded closing sentence. It may acknowledge the work of
 carefully reflecting or studying, but it must not be prophetic,
 diagnostic, flattering, or claim divine approval.
+
+PREFERRED NAME:
+If preferredName is provided, you may use it naturally ONCE across the
+entire response, preferably in the encouragement or a warm transition.
+Do not repeat the name in multiple fields. Do not force it into the
+response if it would sound unnatural.
 
 Keep every field concise enough for a mobile interface.
 """
