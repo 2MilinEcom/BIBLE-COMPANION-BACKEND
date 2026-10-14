@@ -2,10 +2,21 @@ import {decode,encode,characters} from './codec.js';
 const $=id=>document.getElementById(id);
 const names={ruth:'Ruth',joseph:'Joseph',mary:'Mary of Bethany',esther:'Esther',abraham:'Abraham',thomas:'Thomas',hannah:'Hannah',peter:'Peter',moses:'Moses',david:'David'};
 const STORAGE='bibleCompanion.ourMoments.v1';
-let envelope, replyURL, sharedReply;
+let envelope, replyURL, sharedReply, appLink;
 const text=(id,value)=>$(id).textContent=value;
 const reference=i=>i.verses[0].book+' '+i.verses[0].chapter+':'+i.verses.map(v=>v.verse).join(',');
-function openApp(url) { $('open-app').href='biblecompanion://together#'+url.split('#')[1]; }
+function openApp(url) {
+  appLink=url;
+  const direct='biblecompanion://together#'+url.split('#')[1];
+  $('open-app').href=direct.length<=1800?direct:'biblecompanion://together-import';
+  $('open-app').textContent=direct.length<=1800?'Open in Bible Companion':'Copy link & open in Bible Companion';
+}
+$('open-app').addEventListener('click',async event=>{
+  if(!appLink || $('open-app').getAttribute('href')!=='biblecompanion://together-import')return;
+  event.preventDefault();
+  try{await navigator.clipboard.writeText(appLink);location.href='biblecompanion://together-import';}
+  catch{ $('manual-copy').hidden=false;$('reply-url').value=appLink;$('reply-url').select();text('status','Copy the complete link below, then paste it in the app under Our moments.');$('status').hidden=false; }
+});
 function readSaved(){try{const value=JSON.parse(localStorage.getItem(STORAGE)||'[]');return Array.isArray(value)?value:[];}catch{return[];}}
 function renderSaved(){
   const holder=$('local-moments');holder.replaceChildren();
