@@ -3017,6 +3017,10 @@ on this passage.
         }), 500
 
 
+from together import register_together
+register_together(app)
+
+
 # =========================================================
 # START SERVER
 # =========================================================
