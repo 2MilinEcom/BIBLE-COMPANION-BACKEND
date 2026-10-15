@@ -9,7 +9,7 @@ def register_together(app):
     def secured(response):
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
         response.headers["Cache-Control"] = "no-store"
         return response
 
@@ -20,7 +20,7 @@ def register_together(app):
 
     @app.get("/together/<name>")
     def together_static(name):
-        if name not in {"codec.js", "web.js", "styles.css"}:
+        if name not in {"codec.js", "web.js", "styles.css", "conversation.js"}:
             abort(404)
         return secured(send_file(ROOT / name))
 

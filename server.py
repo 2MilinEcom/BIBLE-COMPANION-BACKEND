@@ -3019,6 +3019,8 @@ on this passage.
 
 from together import register_together
 register_together(app)
+from together_conversations import register_conversations
+register_conversations(app, client=client)
 
 
 # =========================================================

@@ -7,6 +7,7 @@ export function validate(e) {
   const i=e?.invitation;
   if (e?.version!==1 || !i || !/^[0-9a-f-]{36}$/i.test(i.id) || !validDate(i.createdAt) || typeof i.allowsKeeping!=='boolean' || !characters.includes(i.characterID) || !bounded(i.senderName,60) || !bounded(i.note,1000) || !bounded(i.takeawayTitle,180,true) || !bounded(i.takeaway,1800) || !bounded(i.question,500,true) || !bounded(i.perspective,1500) || !Array.isArray(i.verses) || i.verses.length<1 || i.verses.length>10) throw Error('This invitation is incomplete. Ask for a fresh link.');
   if(i.giftStyle != null && !giftStyles.includes(i.giftStyle)) throw Error('This gift style could not be opened. Ask for a fresh invitation.');
+  if(i.conversation!=null)validateAccess(i.conversation);
   const first=i.verses[0], seen=new Set();
   for(const v of i.verses) {
     if (!bounded(v.book,40,true) || v.book!==first.book || v.chapter!==first.chapter || !Number.isInteger(v.chapter) || v.chapter<1 || !Number.isInteger(v.verse) || v.verse<1 || seen.has(v.verse) || !bounded(v.text,1800,true)) throw Error('This shared passage could not be opened.');
@@ -47,3 +48,37 @@ export async function encode(e, origin) {
   return origin+'/together#v1='+b64(box)+'.'+b64(raw);
 }
 export { characters };
+
+const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+export function validateAccess(access){
+  if(!access || !uuid(access.id) || typeof access.token!=='string' || typeof access.key!=='string' || !/^[A-Za-z0-9_-]{43}$/.test(access.token) || !/^[A-Za-z0-9_-]{43}$/.test(access.key) || unb64(access.token).length!==32 || unb64(access.key).length!==32)throw Error('This conversation link is incomplete.');
+  return access;
+}
+const canonical=value=>{
+  if(Array.isArray(value))return value.map(canonical);
+  if(value && typeof value==='object')return Object.fromEntries(Object.keys(value).filter(k=>value[k]!=null).sort().map(k=>[k,canonical(value[k])]));
+  return uuid(value)?value.toLowerCase():value;
+};
+export function validateConversation(value,expected){
+  validate({version:1,invitation:value?.invitation});validateAccess(expected.conversation);
+  if(JSON.stringify(canonical(value.invitation))!==JSON.stringify(canonical(expected)) || !Array.isArray(value.messages) || value.messages.length>200)throw Error('This conversation does not match your gift.');
+  const seen=new Set();
+  for(const m of value.messages){if(!uuid(m.id)||seen.has(m.id.toLowerCase())||!uuid(m.authorID)||!validDate(m.createdAt)||!bounded(m.authorName,60)||!bounded(m.text,1500,true))throw Error('A shared message could not be verified.');seen.add(m.id.toLowerCase());}
+  return value;
+}
+export async function sealConversation(value){
+  validateConversation(value,value.invitation);
+  const access=validateAccess(value.invitation.conversation),data=new TextEncoder().encode(JSON.stringify(value));
+  if(data.length>500000)throw Error('This conversation is full. Start a new gift to keep talking.');
+  const iv=crypto.getRandomValues(new Uint8Array(12)),key=await crypto.subtle.importKey('raw',unb64(access.key),'AES-GCM',false,['encrypt']);
+  const encrypted=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,tagLength:128},key,data));
+  const combined=new Uint8Array(iv.length+encrypted.length);combined.set(iv);combined.set(encrypted,12);return b64(combined);
+}
+export async function openConversation(payload,expected){
+  if(typeof payload!=='string'||payload.length>683000)throw Error('This conversation could not be opened.');
+  const access=validateAccess(expected.conversation),combined=unb64(payload);
+  if(combined.length<28||combined.length>512000)throw Error('This conversation could not be opened.');
+  const key=await crypto.subtle.importKey('raw',unb64(access.key),'AES-GCM',false,['decrypt']);
+  const data=await crypto.subtle.decrypt({name:'AES-GCM',iv:combined.slice(0,12),tagLength:128},key,combined.slice(12));
+  return validateConversation(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data)),expected);
+}
