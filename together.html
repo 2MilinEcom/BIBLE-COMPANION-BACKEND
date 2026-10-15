@@ -1,8 +1,29 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark"><title>Read this with me · Bible Companion</title><meta name="description" content="A personal invitation to explore a passage together, at your own pace."><link rel="stylesheet" href="/together/styles.css"><script type="module" src="/together/web.js"></script></head>
-<body><main><header><span class="brand">✧ BIBLE COMPANION</span><span class="quiet">A little space for the two of you</span></header><section class="hero"><div><span class="eyebrow">READ THIS WITH ME</span><h1>Something meaningful.<br>Room for both of you.</h1><p>One passage. Two perspectives. At your own pace.</p></div></section><div id="status" role="status" class="card">Opening your invitation…</div><div id="content" hidden>
+<body><main><header><span class="brand">✧ BIBLE COMPANION</span><span class="quiet">A little something, just for you</span></header><div id="status" role="status" class="card">Preparing your little moment…</div>
+<section id="gift-stage" class="gift-stage" hidden aria-labelledby="gift-title">
+  <div class="gift-kicker"><span aria-hidden="true">✧</span> SOMEONE IS THINKING OF YOU</div>
+  <h1 id="gift-title">A little love.<br>Wrapped just for you.</h1>
+  <p id="gift-from" class="gift-from"></p>
+  <div id="present-scene" class="present-scene" aria-hidden="true">
+    <div class="present-glow"></div><div class="present-orbit orbit-one"></div><div class="present-orbit orbit-two"></div>
+    <span class="star star-one">✧</span><span class="star star-two">✦</span><span class="star star-three">✧</span><span class="star star-four">·</span><span class="star star-five">♡</span>
+    <div class="present-shadow"></div>
+    <div class="gift-object box-object"><div class="box-base"><div class="box-ribbon"></div><div class="box-heart">♥</div></div><div class="box-lid"><div class="lid-ribbon"></div><div class="bow-loop bow-left"></div><div class="bow-loop bow-right"></div><div class="bow-knot"></div><div class="ribbon-tail tail-left"></div><div class="ribbon-tail tail-right"></div></div><div class="gift-tag">for you ♡</div></div>
+    <div class="gift-object letter-object"><div class="letter-paper"><span>just a little</span><strong>thinking of you</strong><i>♡</i></div><div class="envelope-back"></div><div class="envelope-flap"></div><div class="envelope-front"></div><div class="wax-seal">♥</div></div>
+    <div class="gift-object sunshine-object"><div class="sun-rays"></div><div class="sun-disc"><span>♡</span></div><div class="sun-cloud cloud-left"></div><div class="sun-cloud cloud-right"></div></div>
+    <div class="gift-object prayer-object"><div class="prayer-halo"></div><div class="prayer-card"><span>HELD WITH CARE</span><div class="prayer-star">✧</div><strong>A moment<br>of peace.</strong><i>♡</i></div></div>
+  </div>
+  <p id="gift-caption" class="gift-caption">One small gift. A little room to feel it.</p>
+  <button id="unwrap" type="button" class="unwrap-button">Unwrap this moment <span aria-hidden="true">↗</span></button>
+  <button id="skip-opening" type="button" class="skip-opening">Open without animation</button>
+  <p class="gift-footnote">No app needed. No hurry to reply.</p>
+  <p id="gift-opening-status" role="status" class="sr-only"></p>
+</section>
+<div id="content" hidden>
+<section class="hero revealed-hero"><span class="eyebrow">A LITTLE CLOSER</span><h1>A moment<br>worth sharing.</h1><p id="reveal-caption">Their words. A passage. A little room for yours.</p></section>
 <section class="guide"><img id="guide-art" alt="Your illustrated Bible guide" width="144" height="180"><div class="bubble"><span class="eyebrow">A GENTLE INVITATION</span><p id="guide-words">Someone wanted to share this with you. Take your time; there is no deadline to respond.</p></div></section>
-<section class="card"><p id="from" class="eyebrow"></p><h2 id="note"></h2><h3 id="reference"></h3><div id="verses" class="passage"></div><span class="quiet">Shared passage · World English Bible</span></section>
+<section class="card personal-note"><span class="note-flourish" aria-hidden="true">♡</span><p id="from" class="eyebrow"></p><h2 id="note" tabindex="-1"></h2><h3 id="reference"></h3><div id="verses" class="passage"></div><span class="quiet">Shared passage · World English Bible</span></section>
 <section id="takeaway-card" class="card"><span class="eyebrow">SOMETHING TO CONSIDER</span><h2 id="takeaway-title"></h2><p id="takeaway"></p><p class="quiet">A shared AI takeaway—an interpretation you can discuss.</p></section>
 <section class="card"><span class="eyebrow">ONE QUESTION, TWO PERSPECTIVES</span><h2 id="question"></h2><div id="sender-perspective" hidden><h3 id="sender-title"></h3><p id="sender-words"></p></div><div id="received-perspective" hidden><h3 id="reader-title"></h3><p id="reader-words"></p></div></section>
 <section id="reply-form" class="card"><h2>What stood out to you?</h2><p>Your words stay here until you choose to share a reply.</p><label>Your name <span class="quiet">(optional)</span><input id="name" maxlength="60" autocomplete="nickname"></label><label>Your perspective<textarea id="perspective" rows="5" maxlength="1500" placeholder="A thought or question is enough."></textarea></label><label>Your reading guide<select id="character"></select></label><label class="check"><input id="keep" type="checkbox"><span>I agree to keep these shared perspectives in Our moments.</span></label><p id="consent-note" class="quiet"></p><button id="preview" class="primary" type="button">Preview my reply</button></section>

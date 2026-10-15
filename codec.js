@@ -1,10 +1,12 @@
 // AES-GCM wire format shared with CryptoKit: nonce (12 bytes), ciphertext, tag (16 bytes).
 const characters = ['ruth','joseph','mary','esther','abraham','thomas','hannah','peter','moses','david'];
 const bounded = (v,n,required=false) => typeof v==='string' && [...v].length<=n && (!required || v.trim().length>0);
+export const giftStyles = ['heart','letter','sunshine','prayer','surprise'];
 const validDate = v => typeof v==='string' && Number.isFinite(Date.parse(v));
 export function validate(e) {
   const i=e?.invitation;
   if (e?.version!==1 || !i || !/^[0-9a-f-]{36}$/i.test(i.id) || !validDate(i.createdAt) || typeof i.allowsKeeping!=='boolean' || !characters.includes(i.characterID) || !bounded(i.senderName,60) || !bounded(i.note,1000) || !bounded(i.takeawayTitle,180,true) || !bounded(i.takeaway,1800) || !bounded(i.question,500,true) || !bounded(i.perspective,1500) || !Array.isArray(i.verses) || i.verses.length<1 || i.verses.length>10) throw Error('This invitation is incomplete. Ask for a fresh link.');
+  if(i.giftStyle != null && !giftStyles.includes(i.giftStyle)) throw Error('This gift style could not be opened. Ask for a fresh invitation.');
   const first=i.verses[0], seen=new Set();
   for(const v of i.verses) {
     if (!bounded(v.book,40,true) || v.book!==first.book || v.chapter!==first.chapter || !Number.isInteger(v.chapter) || v.chapter<1 || !Number.isInteger(v.verse) || v.verse<1 || seen.has(v.verse) || !bounded(v.text,1800,true)) throw Error('This shared passage could not be opened.');

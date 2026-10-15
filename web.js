@@ -1,8 +1,44 @@
 import {decode,encode,characters,validate} from './codec.js';
 const $=id=>document.getElementById(id);
+history.scrollRestoration='manual';
 const names={ruth:'Ruth',joseph:'Joseph',mary:'Mary of Bethany',esther:'Esther',abraham:'Abraham',thomas:'Thomas',hannah:'Hannah',peter:'Peter',moses:'Moses',david:'David'};
 const STORAGE='bibleCompanion.ourMoments.v1';
 let envelope, replyURL, sharedReply, appLink, savedCorrupt=false;
+const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
+const giftCopy={
+  heart:{title:['A little love.','Wrapped just for you.'],caption:'One small gift. A little room to feel it.'},
+  letter:{title:['Some words deserve','their own envelope.'],caption:'A little letter, with a lot of thought behind it.'},
+  sunshine:{title:['A little sunshine.','Just for your day.'],caption:'Someone wanted to send a little light your way.'},
+  prayer:{title:['A quiet moment.','Held with care.'],caption:'A little space to pause, breathe, and feel remembered.'},
+  surprise:{title:['No occasion.','Just because it’s you.'],caption:'The best little things don’t always need a reason.'}
+};
+let opening=false, opened=false, revealTimer;
+function showGift(invitation){
+  const style=invitation.giftStyle||'heart', copy=giftCopy[style];
+  document.body.dataset.gift=style;
+  const heading=$('gift-title');heading.replaceChildren(document.createTextNode(copy.title[0]),document.createElement('br'),document.createTextNode(copy.title[1]));
+  text('gift-from',invitation.senderName?'From '+invitation.senderName+', with care.':'A little something from someone who cares.');
+  text('gift-caption',copy.caption);
+  $('gift-stage').hidden=false;$('our-local').hidden=true;
+  window.scrollTo({top:0,behavior:'instant'});
+}
+function revealGift(immediate=false){
+  if(opened || opening)return;
+  opening=true;const animate=!immediate && !motion.matches;
+  $('unwrap').disabled=true;$('skip-opening').disabled=true;
+  text('gift-opening-status','Opening your little gift…');
+  const finish=()=>{
+    if(opened)return;opened=true;opening=false;clearTimeout(revealTimer);
+    $('gift-stage').hidden=true;$('content').hidden=false;$('our-local').hidden=false;
+    document.body.classList.add('gift-opened');
+    if(!animate)document.body.classList.add('still-reveal');
+    $('note').focus({preventScroll:true});
+    $('content').scrollIntoView({behavior:'instant',block:'start'});
+  };
+  if(animate){$('gift-stage').classList.add('unwrapping');revealTimer=setTimeout(finish,1150);}else finish();
+}
+$('unwrap').addEventListener('click',()=>revealGift());
+$('skip-opening').addEventListener('click',()=>revealGift(true));
 const text=(id,value)=>$(id).textContent=value;
 const reference=i=>i.verses[0].book+' '+i.verses[0].chapter+':'+i.verses.map(v=>v.verse).join(',');
 function openApp(url) {
@@ -25,7 +61,8 @@ function renderSaved(){
   for(const e of items){
     const article=document.createElement('article'), title=document.createElement('h3'), p=document.createElement('p'), a=document.createElement('a');
     title.textContent=reference(e.invitation);p.textContent=e.invitation.question;a.textContent='Revisit these perspectives';a.className='button';
-    a.href='#';a.addEventListener('click',async event=>{event.preventDefault();const url=await encode(e,location.origin);location.assign(url);location.reload();});
+    a.href='#';a.addEventListener('click',async event=>{event.preventDefault();const url=await encode(e,location.origin);location.assign(url);location.rewindow.addEventListener('hashchange',()=>location.reload());
+load();});
     const remove=document.createElement('button');remove.textContent='Remove my copy';remove.addEventListener('click',()=>{if(window.confirm('Remove this copy from this browser? Copies already shared are unaffected.')){localStorage.setItem(STORAGE,JSON.stringify(readSaved().filter(x=>x.reply?.id!==e.reply?.id)));renderSaved();}});
     article.append(title,p,a,remove);holder.append(article);
   }
@@ -41,7 +78,9 @@ async function load(){
   try{
     envelope=await decode(location.hash);
     const i=envelope.invitation;
-    $('status').hidden=true;$('content').hidden=false;
+    $('status').hidden=true;
+    if(envelope.reply){document.body.dataset.gift=i.giftStyle||'heart';$('content').hidden=false;text('reveal-caption','Two perspectives. One passage. Room for both.');}
+    else showGift(i);
     text('from',i.senderName?'AN INVITATION FROM '+i.senderName:'A MOMENT SOMEONE WANTED TO SHARE');
     text('note',i.note||'I wanted to read this with you.');text('reference',reference(i));
     for(const v of i.verses){const p=document.createElement('p'),number=document.createElement('span');number.className='verse';number.textContent=v.verse;p.append(number,document.createTextNode(v.text));$('verses').append(p);}
@@ -59,7 +98,7 @@ $('preview').addEventListener('click',async()=>{
   try{
     const reply={id:crypto.randomUUID(),createdAt:new Date().toISOString().replace(/\.\d{3}Z$/,'Z'),invitation:envelope.invitation,readerName:$('name').value.trim(),perspective,characterID:$('character').value,allowsKeeping:$('keep').checked};
     const e={version:1,invitation:envelope.invitation,reply};replyURL=await encode(e,location.origin);
-    text('reply-words',perspective);text('reply-consent',reply.allowsKeeping?'You chose to allow keeping these shared words.':'You have not agreed to keeping a shared copy.');$('reply-form').hidden=true;$('reply-preview').hidden=false;allowSave(e);openApp(replyURL);$('reply-preview').scrollIntoView({behavior:'smooth',block:'start'});
+    text('reply-words',perspective);text('reply-consent',reply.allowsKeeping?'You chose to allow keeping these shared words.':'You have not agreed to keeping a shared copy.');$('reply-form').hidden=true;$('reply-preview').hidden=false;allowSave(e);openApp(replyURL);$('reply-preview').scrollIntoView({behavior:motion.matches?'instant':'smooth',block:'start'});
   }catch(error){text('status',error.message);$('status').hidden=false;}
 });
 $('edit').addEventListener('click',()=>{$('reply-form').hidden=false;$('reply-preview').hidden=true;$('save-card').hidden=true;sharedReply=undefined;replyURL=undefined;openApp(location.href);});
@@ -71,4 +110,5 @@ $('save').addEventListener('click',()=>{
   if(!(sharedReply?.invitation.allowsKeeping && sharedReply?.reply?.allowsKeeping))return;
   try{const values=readSaved();if(!values.some(x=>x.reply.id===sharedReply.reply.id))values.unshift(sharedReply);localStorage.setItem(STORAGE,JSON.stringify(values));text('saved','Kept on this browser. Your partner chooses whether to keep their own copy.');$('save').disabled=true;renderSaved();}catch{text('saved','This browser could not save the moment. You can open it in the app instead.');}
 });
+window.addEventListener('hashchange',()=>location.reload());
 load();
