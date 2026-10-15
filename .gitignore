@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+
+# Local files
+**/__pycache__/
+**/xcuserdata/
+.env.local
+node_modules/
+.next/
