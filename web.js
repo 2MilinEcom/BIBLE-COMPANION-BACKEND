@@ -1,8 +1,8 @@
-import {decode,encode,characters} from './codec.js';
+import {decode,encode,characters,validate} from './codec.js';
 const $=id=>document.getElementById(id);
 const names={ruth:'Ruth',joseph:'Joseph',mary:'Mary of Bethany',esther:'Esther',abraham:'Abraham',thomas:'Thomas',hannah:'Hannah',peter:'Peter',moses:'Moses',david:'David'};
 const STORAGE='bibleCompanion.ourMoments.v1';
-let envelope, replyURL, sharedReply, appLink;
+let envelope, replyURL, sharedReply, appLink, savedCorrupt=false;
 const text=(id,value)=>$(id).textContent=value;
 const reference=i=>i.verses[0].book+' '+i.verses[0].chapter+':'+i.verses.map(v=>v.verse).join(',');
 function openApp(url) {
@@ -17,11 +17,11 @@ $('open-app').addEventListener('click',async event=>{
   try{await navigator.clipboard.writeText(appLink);location.href='biblecompanion://together-import';}
   catch{ $('manual-copy').hidden=false;$('reply-url').value=appLink;$('reply-url').select();text('status','Copy the complete link below, then paste it in the app under Our moments.');$('status').hidden=false; }
 });
-function readSaved(){try{const value=JSON.parse(localStorage.getItem(STORAGE)||'[]');return Array.isArray(value)?value:[];}catch{return[];}}
+function readSaved(){try{const value=JSON.parse(localStorage.getItem(STORAGE)||'[]');if(!Array.isArray(value))throw Error();for(const e of value){validate(e);if(!e.reply?.allowsKeeping || !e.invitation.allowsKeeping)throw Error();}return value;}catch{savedCorrupt=true;return[];}}
 function renderSaved(){
   const holder=$('local-moments');holder.replaceChildren();
   const items=readSaved();
-  if(!items.length){const p=document.createElement('p');p.className='quiet';p.textContent='Shared moments you both choose to keep will appear here.';holder.append(p);return;}
+  if(!items.length){const p=document.createElement('p');p.className='quiet';p.textContent=savedCorrupt?'Your saved moments could not be opened. They are preserved, and new saves are paused.':'Shared moments you both choose to keep will appear here.';holder.append(p);return;}
   for(const e of items){
     const article=document.createElement('article'), title=document.createElement('h3'), p=document.createElement('p'), a=document.createElement('a');
     title.textContent=reference(e.invitation);p.textContent=e.invitation.question;a.textContent='Revisit these perspectives';a.className='button';
@@ -32,6 +32,7 @@ function renderSaved(){
 }
 function allowSave(e){
   sharedReply=e;
+  $('save').disabled=readSaved().some(x=>x.reply.id===e.reply?.id);text('saved','');
   $('save-card').hidden=!(e.reply && e.invitation.allowsKeeping && e.reply.allowsKeeping);
 }
 async function load(){
@@ -66,6 +67,7 @@ $('share').addEventListener('click',async()=>{if(!replyURL)return;try{if(navigat
 async function copyReply(){if(!replyURL)return;try{await navigator.clipboard.writeText(replyURL);$('copy').textContent='Reply link copied';}catch{$('manual-copy').hidden=false;$('reply-url').value=replyURL;$('reply-url').select();}}
 $('copy').addEventListener('click',copyReply);
 $('save').addEventListener('click',()=>{
+  if(savedCorrupt){text('saved','Existing saved data could not be opened and has not been replaced. You can save this moment in the app instead.');return;}
   if(!(sharedReply?.invitation.allowsKeeping && sharedReply?.reply?.allowsKeeping))return;
   try{const values=readSaved();if(!values.some(x=>x.reply.id===sharedReply.reply.id))values.unshift(sharedReply);localStorage.setItem(STORAGE,JSON.stringify(values));text('saved','Kept on this browser. Your partner chooses whether to keep their own copy.');$('save').disabled=true;renderSaved();}catch{text('saved','This browser could not save the moment. You can open it in the app instead.');}
 });
