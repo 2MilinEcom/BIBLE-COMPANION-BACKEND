@@ -18,7 +18,7 @@ export async function startConversation(invitation){
   let snapshot,revision=0,sending=false,pending,rendered='',ended=false,sendFailed=false,delivery='';
   const draftKey='bibleCompanion.draft.'+access.id;
   $('chat-name').value=safeGet('bibleCompanion.readerName')||'';
-  try{const draft=JSON.parse(safeGet(draftKey)||'{}');$('chat-message').value=typeof draft.text==='string'?draft.text:'';pending=draft.pending;}catch{}
+  try{const draft=JSON.parse(safeGet(draftKey)||'{}');$('chat-message').value=typeof draft.text==='string'?draft.text:'';pending=draft.pending;sendFailed=!!pending;}catch{}
   const keepDraft=()=>safeSet(draftKey,JSON.stringify({text:$('chat-message').value,pending}));
   const status=text=>$('chat-status').textContent=text;
   function cache(value,version){
@@ -42,7 +42,7 @@ export async function startConversation(invitation){
       time.dateTime=message.createdAt;time.textContent=new Date(message.createdAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});
       card.append(name,words,time);holder.append(card);
     }
-    if(pending && value.messages.some(m=>m.id===pending.id) && $('chat-message').value.trim()===pending.text){$('chat-message').value='';pending=undefined;keepDraft();}
+    if(pending && value.messages.some(m=>m.id===pending.id) && $('chat-message').value.trim()===pending.text){$('chat-message').value='';pending=undefined;sendFailed=false;delivery='Sent · saved on this browser';keepDraft();}
   }
   async function request(method,body,target=access,expected=invitation){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
