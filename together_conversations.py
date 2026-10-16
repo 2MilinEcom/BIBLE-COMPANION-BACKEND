@@ -1,5 +1,6 @@
 """Capability-authenticated encrypted conversations. No plaintext is persisted.
-Configure TOGETHER_DATABASE_URL for durable PostgreSQL. SQLite is local-test only.
+Configure TOGETHER_DATABASE_URL for durable PostgreSQL, or a mounted persistent disk.
+Free Render instances use bounded, temporary SQLite storage; messages may be lost on restart.
 """
 import base64
 import hashlib
@@ -10,6 +11,7 @@ import re
 import sqlite3
 import threading
 import time
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
@@ -20,9 +22,10 @@ TOKEN = re.compile(r"^[A-Za-z0-9_-]{43}$")
 BOX = re.compile(r"^[A-Za-z0-9_-]{38,683000}$")
 
 class ConversationRepository:
-    def __init__(self, dsn=None, sqlite_path=None):
+    def __init__(self, dsn=None, sqlite_path=None, temporary=False):
         self.dsn = dsn
         self.sqlite_path = sqlite_path
+        self.temporary = temporary
         self.lock = threading.Lock()
         self.ready = False
     @property
@@ -41,6 +44,8 @@ class ConversationRepository:
                     conn.execute("CREATE TABLE IF NOT EXISTS bc_reading_conversations (id TEXT PRIMARY KEY, token_hash TEXT NOT NULL, payload TEXT NOT NULL, revision INTEGER NOT NULL, updated_at BIGINT NOT NULL)")
                     conn.commit()
                     self.ready = True
+            if self.temporary:
+                conn.execute("DELETE FROM bc_reading_conversations WHERE updated_at < ?", (int(time.time())-86400,))
             yield conn
             conn.commit()
         except Exception:
@@ -56,7 +61,12 @@ class ConversationRepository:
     def create(self, thread_id, secret, payload):
         digest = hashlib.sha256(secret.encode()).hexdigest()
         with self.connect() as conn:
-            conn.execute(self.query("INSERT INTO bc_reading_conversations(id,token_hash,payload,revision,updated_at) VALUES(?,?,?,1,?) ON CONFLICT(id) DO NOTHING"), (thread_id,digest,payload,int(time.time())))
+            if self.temporary:
+                conn.execute("INSERT INTO bc_reading_conversations(id,token_hash,payload,revision,updated_at) SELECT ?,?,?,1,? WHERE (SELECT COUNT(*) FROM bc_reading_conversations)<256 ON CONFLICT(id) DO NOTHING", (thread_id,digest,payload,int(time.time())))
+                if conn.execute("SELECT 1 FROM bc_reading_conversations WHERE id=?",(thread_id,)).fetchone() is None:
+                    raise RuntimeError("Temporary conversation capacity reached")
+            else:
+                conn.execute(self.query("INSERT INTO bc_reading_conversations(id,token_hash,payload,revision,updated_at) VALUES(?,?,?,1,?) ON CONFLICT(id) DO NOTHING"), (thread_id,digest,payload,int(time.time())))
         return self.read(thread_id,secret)
     def update(self, thread_id, secret, payload, revision):
         digest = hashlib.sha256(secret.encode()).hexdigest()
@@ -67,7 +77,13 @@ class ConversationRepository:
 def register_conversations(app, client=None, repository=None):
     sqlite_path=os.getenv("TOGETHER_SQLITE_PATH")
     if os.getenv("RENDER") and not (os.getenv("TOGETHER_PERSISTENT_STORAGE")=="1" and sqlite_path and os.path.realpath(sqlite_path).startswith("/var/data/") and Path(sqlite_path).parent.is_dir()): sqlite_path=None
-    repo=repository or ConversationRepository(os.getenv("TOGETHER_DATABASE_URL"),sqlite_path)
+    dsn=os.getenv("TOGETHER_DATABASE_URL")
+    temporary=bool(os.getenv("RENDER") and not dsn and not sqlite_path and os.getenv("TOGETHER_TEMPORARY_STORAGE","1")=="1")
+    if temporary:
+        directory=Path(tempfile.gettempdir())/"bible-companion-conversations"
+        directory.mkdir(mode=0o700,exist_ok=True)
+        sqlite_path=str(directory/"temporary.sqlite3")
+    repo=repository or ConversationRepository(dsn,sqlite_path,temporary=temporary)
     buckets={}
     bucket_lock=threading.Lock()
     def limited(category, limit):
@@ -91,7 +107,7 @@ def register_conversations(app, client=None, repository=None):
         return response
     @app.get("/together/api/status")
     def conversation_status():
-        return jsonify({"conversations":repo.configured})
+        return jsonify({"conversations":repo.configured,"storage":"temporary" if repo.temporary else ("durable" if repo.configured else "disabled"),"idleExpiryHours":24 if repo.temporary else None})
     @app.route("/together/api/conversations/<thread_id>",methods=["GET","POST","PUT"])
     def conversation(thread_id):
         try: thread_id=str(UUID(thread_id))

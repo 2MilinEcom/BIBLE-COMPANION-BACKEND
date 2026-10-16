@@ -28,7 +28,7 @@ export async function startConversation(invitation){
       for(const item of data.items){validateConversation(item.conversation,item.conversation.invitation);if(!Number.isInteger(item.revision)||item.revision<1)throw Error();}
       data.items=data.items.filter(x=>x.conversation.invitation.conversation.id.toLowerCase()!==access.id.toLowerCase());
       data.items.unshift({conversation:value,revision:version});localStorage.setItem(STORE,JSON.stringify(data));
-    }catch{status('This browser couldn’t save a local copy. Your live conversation is still available from its gift link; existing local data was not replaced.');}
+    }catch{status('This browser couldn’t save a local copy. Keep the gift link to reopen it. Live messages are temporary; existing local data was not replaced.');}
   }
   function render(value){
     const signature=JSON.stringify(value.messages);
