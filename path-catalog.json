@@ -1,0 +1,155 @@
+[
+  {
+    "id": "meet-jesus",
+    "title": "A first walk with Jesus",
+    "summary": "A welcoming place for questions, curiosity, and a fresh beginning.",
+    "focus": "Meet Jesus",
+    "characterID": "ruth",
+    "steps": [
+      {
+        "id": 0,
+        "title": "An invitation to come closer",
+        "reference": "John 1:35-39",
+        "question": "What do you notice about the invitation to come and see?"
+      },
+      {
+        "id": 1,
+        "title": "You can bring your questions",
+        "reference": "John 3:1-8",
+        "question": "What would you want to ask if you were Nicodemus?"
+      },
+      {
+        "id": 2,
+        "title": "Seen in an ordinary moment",
+        "reference": "John 4:7-14",
+        "question": "What surprises you about how this conversation begins?"
+      },
+      {
+        "id": 3,
+        "title": "Room for someone overlooked",
+        "reference": "Luke 19:1-10",
+        "question": "How does Jesus respond to someone others have judged?"
+      },
+      {
+        "id": 4,
+        "title": "Learning to pray",
+        "reference": "Matthew 6:9-13",
+        "question": "Which words would you like to sit with, without rushing?"
+      },
+      {
+        "id": 5,
+        "title": "Love in practice",
+        "reference": "Luke 10:25-37",
+        "question": "What does care look like in this story?"
+      },
+      {
+        "id": 6,
+        "title": "A next step of your own",
+        "reference": "John 15:9-12",
+        "question": "What question or small practice would you like to carry forward?"
+      }
+    ]
+  },
+  {
+    "id": "hope",
+    "title": "A little room for hope",
+    "summary": "Gentle readings for difficult days, without pressure to feel better immediately.",
+    "focus": "Hope",
+    "characterID": "hannah",
+    "steps": [
+      {
+        "id": 0,
+        "title": "An honest question",
+        "reference": "Psalms 13:1-6",
+        "question": "What does this psalm make room for someone to say?"
+      },
+      {
+        "id": 1,
+        "title": "A place to rest",
+        "reference": "Psalms 23:1-6",
+        "question": "Which image stays with you today?"
+      },
+      {
+        "id": 2,
+        "title": "Bring what feels heavy",
+        "reference": "Matthew 11:28-30",
+        "question": "What might rest mean in the context of these words?"
+      },
+      {
+        "id": 3,
+        "title": "Meeting sorrow",
+        "reference": "John 11:32-36",
+        "question": "What do you notice about Jesus in the presence of grief?"
+      },
+      {
+        "id": 4,
+        "title": "Renewed strength",
+        "reference": "Isaiah 40:28-31",
+        "question": "What does this passage say about weariness?"
+      },
+      {
+        "id": 5,
+        "title": "Care for today",
+        "reference": "Matthew 6:25-34",
+        "question": "What would it mean to give today some attention?"
+      },
+      {
+        "id": 6,
+        "title": "Room for tomorrow",
+        "reference": "Romans 15:4-7",
+        "question": "How do patience, encouragement, and welcome appear together here?"
+      }
+    ]
+  },
+  {
+    "id": "relationships",
+    "title": "Small steps toward each other",
+    "summary": "Readings about listening, kindness, and care for a partner or someone you love.",
+    "focus": "Relationships",
+    "characterID": "ruth",
+    "steps": [
+      {
+        "id": 0,
+        "title": "Listen before responding",
+        "reference": "James 1:19-20",
+        "question": "What changes when listening comes before speaking?"
+      },
+      {
+        "id": 1,
+        "title": "A gentler answer",
+        "reference": "Proverbs 15:1-4",
+        "question": "What difference do you notice between gentle and harsh words?"
+      },
+      {
+        "id": 2,
+        "title": "Everyday kindness",
+        "reference": "Romans 12:9-18",
+        "question": "Which act of care feels small enough to try?"
+      },
+      {
+        "id": 3,
+        "title": "Love with patience",
+        "reference": "1 Corinthians 13:4-7",
+        "question": "Which description of love challenges or encourages you?"
+      },
+      {
+        "id": 4,
+        "title": "Words that build up",
+        "reference": "Ephesians 4:29-32",
+        "question": "How might words help someone feel heard?"
+      },
+      {
+        "id": 5,
+        "title": "Carry a little together",
+        "reference": "Galatians 6:2-5",
+        "question": "What do you notice about care for others and personal responsibility?"
+      },
+      {
+        "id": 6,
+        "title": "A practice of love",
+        "reference": "John 15:9-12",
+        "question": "What would one freely chosen act of love look like?"
+      }
+    ]
+  }
+]
