@@ -82,3 +82,10 @@ export async function openConversation(payload,expected){
   const data=await crypto.subtle.decrypt({name:'AES-GCM',iv:combined.slice(0,12),tagLength:128},key,combined.slice(12));
   return validateConversation(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data)),expected);
 }
+
+export function freshConversationInvitation(invitation,senderName='') {
+  validate({version:1,invitation});
+  const secret=()=>{const raw=crypto.getRandomValues(new Uint8Array(32));return btoa(String.fromCharCode(...raw)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');};
+  const fresh={...invitation,id:crypto.randomUUID(),createdAt:new Date().toISOString().replace(/\.\d{3}Z$/,'Z'),senderName:[...senderName.trim()].slice(0,60).join(''),note:"Let's keep talking about this passage.",perspective:'',allowsKeeping:true,conversation:{id:crypto.randomUUID(),token:secret(),key:secret()}};
+  validate({version:1,invitation:fresh});return fresh;
+}

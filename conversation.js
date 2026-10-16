@@ -1,4 +1,4 @@
-import {validateAccess,validateConversation,sealConversation,openConversation} from './codec.js';
+import {validateAccess,validateConversation,sealConversation,openConversation,freshConversationInvitation,encode} from './codec.js';
 const $=id=>document.getElementById(id);
 const STORE='bibleCompanion.conversations.v1';
 const safeGet=key=>{try{return localStorage.getItem(key);}catch{return null;}};
@@ -15,7 +15,7 @@ export async function startConversation(invitation){
   const access=validateAccess(invitation.conversation);
   $('chat-card').hidden=false;
   const endpoint='/together/api/conversations/'+encodeURIComponent(access.id.toLowerCase());
-  let snapshot,revision=0,sending=false,pending,rendered='';
+  let snapshot,revision=0,sending=false,pending,rendered='',ended=false,sendFailed=false,delivery='';
   const draftKey='bibleCompanion.draft.'+access.id;
   $('chat-name').value=safeGet('bibleCompanion.readerName')||'';
   try{const draft=JSON.parse(safeGet(draftKey)||'{}');$('chat-message').value=typeof draft.text==='string'?draft.text:'';pending=draft.pending;}catch{}
@@ -44,26 +44,63 @@ export async function startConversation(invitation){
     }
     if(pending && value.messages.some(m=>m.id===pending.id) && $('chat-message').value.trim()===pending.text){$('chat-message').value='';pending=undefined;keepDraft();}
   }
-  async function request(method,body){
+  async function request(method,body,target=access,expected=invitation){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
     try{
-      const response=await fetch(endpoint,{method,headers:{Authorization:'Bearer '+access.token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:controller.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer'});
+      const response=await fetch('/together/api/conversations/'+encodeURIComponent(target.id.toLowerCase()),{method,headers:{Authorization:'Bearer '+target.token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:controller.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer'});
+      if(response.status===404){const error=Error('This temporary conversation is no longer available.');error.ended=true;throw error;}
       if(response.status===409){const error=Error('New messages arrived. Your draft is still here; try Send again.');error.conflict=true;throw error;}
       if(!response.ok)throw Error('The conversation couldn’t connect. Your gift and draft are still here. Try again in a moment.');
       const wire=await response.json();if(!Number.isInteger(wire.revision)||wire.revision<1)throw Error('This conversation could not be verified.');
-      const value=await openConversation(wire.payload,invitation);return{value,revision:wire.revision};
+      const value=await openConversation(wire.payload,expected);return{value,revision:wire.revision};
     }finally{clearTimeout(timer);}
   }
-  async function refresh(){
-    try{const result=await request('GET');if(stopped)return; snapshot=result.value;revision=result.revision;status('');render(snapshot);cache(snapshot,revision);$('chat-send').disabled=snapshot.messages.length>=200;if(snapshot.messages.length>=200)status('This conversation is full. A new gift is a lovely way to keep talking.');}
-    catch{if(!stopped){status('The conversation couldn’t connect. Your gift and draft are still here. Refresh the page to try again.');$('chat-send').disabled=!snapshot;}}
+  function controls(){
+    $('chat-send').textContent=sending?'Sending…':sendFailed?'Retry message ↗':'Send message ↗';
+    $('chat-send').disabled=sending||ended||!snapshot||snapshot.messages.length>=200||!$('chat-message').value.trim();
+    $('chat-ended').hidden=!ended;
   }
+  async function refresh(){
+    try{
+      const result=await request('GET');if(stopped)return;
+      snapshot=result.value;revision=result.revision;ended=false;render(snapshot);cache(snapshot,revision);
+      if(!sendFailed)status(delivery);
+      if(snapshot.messages.length>=200)status('This conversation is full. Start a new conversation to keep talking.');
+    }catch(error){
+      if(!stopped){ended=!!error.ended;status(ended?'':"Couldn't refresh. Your gift, downloaded messages, and draft are still here. Try Refresh when connected.");}
+    }
+    controls();
+  }
+  try{
+    const data=JSON.parse(safeGet(STORE)||'{"version":1,"items":[]}');
+    if(data.version===1&&Array.isArray(data.items)){
+      const saved=data.items.find(x=>x.conversation?.invitation?.conversation?.id.toLowerCase()===access.id.toLowerCase());
+      if(saved){validateConversation(saved.conversation,invitation);snapshot=saved.conversation;revision=saved.revision;render(snapshot);}
+    }
+  }catch{}
+  $('chat-refresh').addEventListener('click',()=>{if(!sending)refresh();});
+  $('chat-share').addEventListener('click',async()=>{
+    try{if(navigator.share)await navigator.share({title:'Our conversation · Bible Companion',url:location.href});else{await navigator.clipboard.writeText(location.href);status('Conversation link copied. Send it to your person.');}}
+    catch(error){if(error.name!=='AbortError')status('Copy the complete link from your address bar to share this conversation.');}
+  });
+  $('chat-restart').addEventListener('click',async()=>{
+    $('chat-restart').disabled=true;status('Opening a fresh conversation…');
+    try{
+      const fresh=freshConversationInvitation(invitation,$('chat-name').value),value={invitation:fresh,messages:[]};
+      const link=await encode({version:1,invitation:fresh},location.origin);
+      await request('POST',{payload:await sealConversation(value)},fresh.conversation,fresh);
+      safeSet('bibleCompanion.draft.'+fresh.conversation.id,JSON.stringify({text:$('chat-message').value}));
+      // Keep the original gift and its cached history; a fresh link starts a separate conversation.
+      location.assign(link);
+    }catch{status("A fresh conversation couldn't connect yet. Your gift and draft are still here. Try again in a moment.");$('chat-restart').disabled=false;}
+  });
   $('chat-send').disabled=true;
-  $('chat-message').addEventListener('input',keepDraft);
+  $('chat-message').addEventListener('input',()=>{keepDraft();controls();});
+  $('chat-name').addEventListener('input',()=>safeSet('bibleCompanion.readerName',$('chat-name').value));
   $('chat-send').addEventListener('click',async()=>{
     const words=$('chat-message').value.trim(),name=$('chat-name').value.trim();
     if(sending||!words||[...words].length>1500||[...name].length>60||!snapshot)return;
-    sending=true;$('chat-send').disabled=true;$('chat-message').disabled=true;$('chat-name').disabled=true;status('Sending…');
+    sending=true;sendFailed=false;delivery='';controls();$('chat-send').disabled=true;$('chat-message').disabled=true;$('chat-name').disabled=true;status('Sending…');
     if(!pending||pending.text!==words||pending.authorName!==name)pending={id:crypto.randomUUID(),createdAt:new Date().toISOString().replace(/\.\d{3}Z$/,'Z'),authorID:viewer,authorName:name,text:words};
     keepDraft();safeSet('bibleCompanion.readerName',name);
     try{
@@ -75,10 +112,10 @@ export async function startConversation(invitation){
         try{const result=await request('PUT',{revision:latest.revision,payload:await sealConversation(latest.value)});snapshot=result.value;revision=result.revision;sent=true;break;}
         catch(error){if(!error.conflict||attempt===2)throw error;}
       }
-      if(sent){$('chat-message').value='';pending=undefined;keepDraft();status('Sent · saved automatically');render(snapshot);cache(snapshot,revision);}
-    }catch(error){status(error.message||'Your message couldn’t send. Your draft is still here.');}
-    finally{sending=false;$('chat-send').disabled=!snapshot||snapshot.messages.length>=200;$('chat-message').disabled=false;$('chat-name').disabled=false;}
+      if(sent){$('chat-message').value='';pending=undefined;keepDraft();delivery='Sent · saved on this browser';status(delivery);render(snapshot);cache(snapshot,revision);}
+    }catch(error){ended=!!error.ended;sendFailed=true;status(ended?'':"Your message wasn't confirmed. Your draft is saved. Retry when connected; retrying won't send a duplicate.");}
+    finally{sending=false;controls();$('chat-message').disabled=false;$('chat-name').disabled=false;}
   });
   await refresh();
-  while(!stopped){await new Promise(resolve=>setTimeout(resolve,6000));if(!document.hidden&&!sending)await refresh();}
+  while(!stopped){await new Promise(resolve=>setTimeout(resolve,6000));if(!document.hidden&&!sending&&!ended)await refresh();}
 }
